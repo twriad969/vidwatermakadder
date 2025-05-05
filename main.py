@@ -197,6 +197,9 @@ async def process_video(task_id: str, input_path: str, watermark_text: str, movi
             # Wait for process to complete
             process.wait()
             
+            # Get error output
+            error_output = process.stderr.read()
+            
             # Check if process completed successfully
             if process.returncode == 0:
                 processing_status[task_id].update({
@@ -205,7 +208,9 @@ async def process_video(task_id: str, input_path: str, watermark_text: str, movi
                     "output_path": output_path
                 })
             else:
-                raise Exception(f"FFmpeg process failed with exit code {process.returncode}")
+                error_msg = f"FFmpeg process failed with exit code {process.returncode}\nError output: {error_output}"
+                print(f"FFmpeg Error: {error_msg}")  # Log the error
+                raise Exception(error_msg)
         else:
             # Fallback if duration can't be determined
             output_path = utils.watermark_video(input_path, watermark_text, moving_watermark)
@@ -215,9 +220,11 @@ async def process_video(task_id: str, input_path: str, watermark_text: str, movi
                 "output_path": output_path
             })
     except Exception as e:
+        error_msg = str(e)
+        print(f"Video Processing Error: {error_msg}")  # Log the error
         processing_status[task_id].update({
             "status": "error",
-            "error": str(e)
+            "error": error_msg
         })
     finally:
         # Clean up uploaded file
