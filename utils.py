@@ -69,16 +69,17 @@ def watermark_video(input_path: str, watermark_text: str, moving: bool = False) 
     # Set up watermark filter based on whether it should be moving or static
     if moving:
         # Moving watermark: text scrolls across the bottom of the video
-        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x='if(gte(t,0),w-50*t,NAN)':y=h-30:fontfile=/nix/store/*-dejavu-fonts-*/share/fonts/truetype/DejaVuSans.ttf"
+        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x='if(gte(t,0),w-50*t,NAN)':y=h-30"
     else:
         # Static watermark in the corner
-        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x=10:y=10:fontfile=/nix/store/*-dejavu-fonts-*/share/fonts/truetype/DejaVuSans.ttf"
+        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x=10:y=10"
     
     # FFmpeg command to add text watermark
     cmd = [
         get_ffmpeg_path(), "-i", input_path,
         "-vf", vf_text,
-        "-codec:a", "copy",
+        "-c:v", "libx264", "-preset", "ultrafast",  # Use ultrafast preset for faster processing
+        "-c:a", "copy",
         "-y", output_path
     ]
     
@@ -88,13 +89,18 @@ def watermark_video(input_path: str, watermark_text: str, moving: bool = False) 
             cmd,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=300  # Add a 5-minute timeout
         )
         print(f"FFmpeg output: {result.stdout}")  # Log successful output
         return output_path
     except subprocess.CalledProcessError as e:
         error_msg = f"FFmpeg failed with exit code {e.returncode}\nError output: {e.stderr}"
         print(f"FFmpeg Error: {error_msg}")  # Log the error
+        raise Exception(error_msg)
+    except subprocess.TimeoutExpired as e:
+        error_msg = f"FFmpeg process timed out after 5 minutes\nError output: {e.stderr}"
+        print(f"FFmpeg Timeout: {error_msg}")  # Log the timeout
         raise Exception(error_msg)
 
 def watermark_video_with_progress(input_path: str, watermark_text: str, moving: bool = False) -> list:
@@ -115,7 +121,8 @@ def watermark_video_with_progress(input_path: str, watermark_text: str, moving: 
         get_ffmpeg_path(),
         "-i", input_path,
         "-vf", vf_text,
-        "-codec:a", "copy",
+        "-c:v", "libx264", "-preset", "ultrafast",  # Use ultrafast preset for faster processing
+        "-c:a", "copy",
         "-progress", "pipe:1",
         "-y", output_path
     ]
