@@ -30,8 +30,12 @@ async def watermark_image_endpoint(
     watermark_text: str = Form(...)
 ):
     """Endpoint for image watermarking"""
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
+    # Check both content type and file extension
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    
+    if not (file.content_type and file.content_type.startswith("image/")) and file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="File must be an image (supported formats: jpg, jpeg, png, gif, bmp, webp)")
     
     # Save uploaded file
     input_path = await utils.save_upload_file(file)
@@ -65,8 +69,12 @@ async def watermark_video_endpoint(
     - watermark_text: Text to use as watermark
     - moving_watermark: If True, the watermark will move across the video
     """
-    if not file.content_type.startswith("video/"):
-        raise HTTPException(status_code=400, detail="File must be a video")
+    # Check both content type and file extension
+    allowed_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm'}
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    
+    if not (file.content_type and file.content_type.startswith("video/")) and file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="File must be a video (supported formats: mp4, avi, mov, mkv, wmv, flv, webm)")
     
     # Generate a unique task ID
     task_id = str(uuid.uuid4())
