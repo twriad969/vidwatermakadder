@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form, HTTPException, BackgroundTasks, Query
+from fastapi import FastAPI, UploadFile, Form, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -113,17 +113,20 @@ async def get_status(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
     
     status = processing_status[task_id]
-    
-    if status["status"] == "completed":
-        return JSONResponse({
-            "status": "completed",
-            "download_url": f"/download/{task_id}"
-        })
-    
-    return JSONResponse({
+    response_data = {
         "status": status["status"],
         "progress": status["progress"]
-    })
+    }
+    
+    # Add error details if available
+    if status["status"] == "error" and "error" in status:
+        response_data["error"] = status["error"]
+    
+    # Add download URL if completed
+    if status["status"] == "completed":
+        response_data["download_url"] = f"/download/{task_id}"
+    
+    return JSONResponse(response_data)
 
 @app.get("/download/{task_id}")
 async def download_file(task_id: str):
@@ -146,6 +149,22 @@ async def download_file(task_id: str):
         output_path,
         filename=f"{watermark_type}watermarked_{original_filename}"
     )
+
+@app.get("/curl-commands/{task_id}")
+async def get_curl_commands(task_id: str, request: Request):
+    """Get curl commands for status and download"""
+    if task_id not in processing_status:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    base_url = str(request.base_url).rstrip('/')
+    
+    status_cmd = f"curl {base_url}/status/{task_id}"
+    download_cmd = f"curl {base_url}/download/{task_id} --output watermarked_video.mp4"
+    
+    return JSONResponse({
+        "status_command": status_cmd,
+        "download_command": download_cmd
+    })
 
 @app.get("/health")
 async def health_check():
@@ -233,4 +252,4 @@ async def process_video(task_id: str, input_path: str, watermark_text: str, movi
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000, http="h11") 
