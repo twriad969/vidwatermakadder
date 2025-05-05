@@ -69,10 +69,10 @@ def watermark_video(input_path: str, watermark_text: str, moving: bool = False) 
     # Set up watermark filter based on whether it should be moving or static
     if moving:
         # Moving watermark: text scrolls across the bottom of the video
-        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x='if(gte(t,0),w-50*t,NAN)':y=h-30:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x='if(gte(t,0),w-50*t,NAN)':y=h-30:fontfile=/nix/store/*-dejavu-fonts-*/share/fonts/truetype/DejaVuSans.ttf"
     else:
         # Static watermark in the corner
-        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x=10:y=10:fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        vf_text = f"drawtext=text='{watermark_text}':fontcolor=white:fontsize=24:x=10:y=10:fontfile=/nix/store/*-dejavu-fonts-*/share/fonts/truetype/DejaVuSans.ttf"
     
     # FFmpeg command to add text watermark
     cmd = [
